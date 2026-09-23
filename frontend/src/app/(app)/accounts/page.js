@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import Modal from "@/components/Modal";
 
@@ -18,6 +18,7 @@ export default function AccountsPage() {
   });
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editingAccount, setEditingAccount] = useState(null);
 
   async function loadAccounts() {
     try {
@@ -37,22 +38,73 @@ export default function AccountsPage() {
     loadAccounts();
   }, []);
 
+  function openCreateModal() {
+    setEditingAccount(null);
+
+    setFormData({
+      name: "",
+      type: "AHORROS",
+      balance: "",
+      currency: "COP",
+    });
+
+    setFormError("");
+    setIsModalOpen(true);
+  }
+
+  function openEditingModal(account) {
+    setEditingAccount(account);
+
+    setFormData({
+      name: account.name,
+      type: account.type,
+      balance: String(account.balance),
+      currency: account.currency,
+    });
+
+    setFormError("");
+    setIsModalOpen(true);
+  }
+
+  function closeModal() {
+    setIsModalOpen(false);
+    setEditingAccount(null);
+    setFormError("");
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
+
     setFormError("");
     setSubmitting(true);
 
     try {
-      await apiFetch("/api/accounts", {
-        method: "POST",
-        body: JSON.stringify({
-          ...formData,
-          balance: parseFloat(formData.balance) || 0,
-        }),
+      const accountData = {
+        ...formData,
+        balance: parseFloat(formData.balance || 0,)
+      };
+
+      const url = editingAccount
+        ? `/api/accounts/${editingAccount.id}`
+        : "/api/accounts";
+
+      const method = editingAccount ? "PUT" : "POST";
+
+      await apiFetch(url, {
+        method,
+        body: JSON.stringify(accountData),
       });
-      setIsModalOpen(false);
-      setFormData({ name: "", type: "AHORROS", balance: "", currency: "COP" });
-      loadAccounts();
+
+      closeModal();
+
+      setFormData({
+        name: "",
+        type: "AHORROS",
+        balance: "",
+        currency:"COP",
+      });
+
+      await loadAccounts();
     } catch (err) {
       setFormError(err.message);
     } finally {
@@ -74,23 +126,23 @@ export default function AccountsPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2DD4BF]" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
       </div>
     );
   }
 
   return (
-    <div className="bg-[#070A0F] min-h-screen p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
+    <div className="bg-fondo min-h-screen p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-800/80 pb-5">
         <div>
           <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-white">Mis Cuentas</h1>
           <p className="text-sm text-slate-400">Balance general de tus fuentes de dinero</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-[#2DD4BF] hover:bg-[#26b8a5] text-slate-950 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-[#2DD4BF]/10 flex items-center justify-center gap-2 w-full sm:w-auto"
+          onClick={openCreateModal}
+          className="bg-accent hover:bg-accent-hover text-slate-950 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-accent/10 flex items-center justify-center gap-2 w-full sm:w-auto"
         >
-          <Plus className="w-4 h-4 stroke-[3]" />
+          <Plus className="w-4 h-4 stroke-3" />
           Nueva Cuenta
         </button>
       </div>
@@ -102,7 +154,7 @@ export default function AccountsPage() {
       )}
 
       {!error && accounts.length === 0 ? (
-        <div className="bg-[#0D121F] rounded-2xl border border-slate-800/80 p-12 text-center">
+        <div className="bg-primary rounded-2xl border border-slate-800/80 p-12 text-center">
           <p className="text-slate-400 text-sm">No hay cuentas registradas todavía.</p>
         </div>
       ) : (
@@ -110,24 +162,33 @@ export default function AccountsPage() {
           {accounts.map((acc) => (
             <div
               key={acc.id}
-              className="bg-[#0D121F] border border-slate-800/80 hover:border-slate-700 p-6 rounded-2xl transition-all shadow-xl relative overflow-hidden group"
+              className="bg-primary border border-slate-800/80 hover:border-slate-700 p-6 rounded-2xl transition-all shadow-xl relative overflow-hidden group"
             >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-[#2DD4BF]/5 rounded-bl-full pointer-events-none group-hover:bg-[#2DD4BF]/10 transition-all" />
+              <div className="absolute top-0 right-0 w-30 h-30 bg-accent/5 rounded-bl-full pointer-events-none group-hover:bg-accent/10 transition-all" />
 
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#2DD4BF] bg-[#2DD4BF]/10 px-2.5 py-1 rounded-md border border-[#2DD4BF]/20">
+                  <span className="text-xs font-bold uppercase tracking-wider text-accent bg-accent/10 px-2.5 py-1 rounded-md border border-accent/20">
                     {acc.currency}
                   </span>
                   <h3 className="text-lg font-bold text-white mt-2">{acc.name}</h3>
                 </div>
-                <button
-                  onClick={() => handleDelete(acc.id)}
-                  className="text-slate-600 hover:text-rose-400 transition-colors p-1"
-                  title="Eliminar cuenta"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openEditingModal(acc)}
+                    className="text-slate-600 hover:text-accent transition-colors p-1"
+                    title="Editar cuenta"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(acc.id)}
+                    className="text-slate-600 hover:text-rose-400 transition-colors p-1"
+                    title="Eliminar cuenta"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <span className="text-xs font-medium text-slate-400 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
@@ -145,7 +206,7 @@ export default function AccountsPage() {
         </div>
       )}
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Nueva Cuenta">
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingAccount ? "Editar Cuenta" : "Nueva cuenta"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           {formError && (
             <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">
@@ -160,7 +221,7 @@ export default function AccountsPage() {
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-[#2DD4BF]"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
               placeholder="Cuenta Bancolombia"
             />
           </div>
@@ -170,7 +231,7 @@ export default function AccountsPage() {
             <select
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-[#2DD4BF]"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
             >
               {ACCOUNT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -184,7 +245,7 @@ export default function AccountsPage() {
               required
               value={formData.balance}
               onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-[#2DD4BF]"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
               placeholder="0.00"
             />
           </div>
@@ -194,7 +255,7 @@ export default function AccountsPage() {
             <select
               value={formData.currency}
               onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-[#2DD4BF]"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
             >
               {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -203,9 +264,9 @@ export default function AccountsPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-[#2DD4BF] hover:bg-[#26b8a5] text-slate-950 font-bold py-2.5 rounded-xl transition-all disabled:opacity-50 mt-2"
+            className="w-full bg-accent hover:bg-accent-hover text-slate-950 font-bold py-2.5 rounded-xl transition-all disabled:opacity-50 mt-2"
           >
-            {submitting ? "Creando..." : "Crear Cuenta"}
+            {submitting ? editingAccount ? "Guardando..." : "Creando..." : editingAccount ? "Guardar cambios" : "Crear Cuenta"}
           </button>
         </form>
       </Modal>
