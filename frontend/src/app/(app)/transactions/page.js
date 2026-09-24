@@ -92,13 +92,13 @@ export default function TransactionsPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2DD4BF]" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
       </div>
     );
   }
 
   return (
-    <div className="bg-[#070A0F] min-h-screen p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
+    <div className="bg-fondo min-h-screen p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-800/80 pb-5">
         <div>
           <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-white">Transacciones</h1>
@@ -106,9 +106,9 @@ export default function TransactionsPage() {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-[#2DD4BF] hover:bg-[#26b8a5] text-slate-950 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-[#2DD4BF]/10 flex items-center justify-center gap-2 w-full sm:w-auto"
+          className="bg-accent hover:bg-accent-hover text-slate-950 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-accent/10 flex items-center justify-center gap-2 w-full sm:w-auto"
         >
-          <Plus className="w-4 h-4 stroke-[3]" />
+          <Plus className="w-4 h-4 stroke-3" />
           Nueva Transacción
         </button>
       </div>
@@ -120,11 +120,11 @@ export default function TransactionsPage() {
       )}
 
       {!error && transactions.length === 0 ? (
-        <div className="bg-[#0D121F] rounded-2xl border border-slate-800/80 p-12 text-center">
+        <div className="bg-primary rounded-2xl border border-slate-800/80 p-12 text-center">
           <p className="text-slate-400 text-sm">No hay transacciones registradas todavía.</p>
         </div>
       ) : (
-        <div className="bg-[#0D121F] border border-slate-800/80 rounded-2xl overflow-hidden">
+        <div className="bg-primary border border-slate-800/80 rounded-2xl overflow-hidden">
           {transactions.map((tx) => {
             const isReversal = tx.reversed_transaction_id !== null;
             const wasReversed = transactions.some((t) => t.reversed_transaction_id === tx.id);
@@ -137,7 +137,7 @@ export default function TransactionsPage() {
               >
                 <Link href={`/transactions/${tx.id}`} className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                   <div
-                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${
                       isIncome ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
                     }`}
                   >
@@ -164,7 +164,7 @@ export default function TransactionsPage() {
                   </div>
                 </Link>
 
-                <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                   <span className={`text-sm font-bold ${isIncome ? "text-emerald-400" : "text-rose-400"}`}>
                     {isIncome ? "+" : "-"}${Number(tx.amount).toLocaleString("es-CO", { minimumFractionDigits: 2 })}
                   </span>
@@ -224,7 +224,7 @@ export default function TransactionsPage() {
               required
               value={formData.accountId}
               onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-[#2DD4BF]"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
             >
               <option value="">Selecciona una cuenta</option>
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -237,7 +237,7 @@ export default function TransactionsPage() {
               required
               value={formData.categoryId}
               onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-[#2DD4BF]"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
             >
               <option value="">Selecciona una categoría</option>
               {filteredCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -252,7 +252,7 @@ export default function TransactionsPage() {
               required
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-[#2DD4BF]"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
               placeholder="0.00"
             />
           </div>
@@ -263,7 +263,7 @@ export default function TransactionsPage() {
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-[#2DD4BF]"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
               placeholder="Ej. Almuerzo con el equipo"
             />
           </div>
@@ -275,14 +275,14 @@ export default function TransactionsPage() {
               required
               value={formData.transactionDate}
               onChange={(e) => setFormData({ ...formData, transactionDate: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-[#2DD4BF]"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
             />
           </div>
 
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-[#2DD4BF] hover:bg-[#26b8a5] text-slate-950 font-bold py-2.5 rounded-xl transition-all disabled:opacity-50 mt-2"
+            className="w-full bg-accent hover:bg-accent-hover text-slate-950 font-bold py-2.5 rounded-xl transition-all disabled:opacity-50 mt-2"
           >
             {submitting ? "Guardando..." : "Crear Transacción"}
           </button>
