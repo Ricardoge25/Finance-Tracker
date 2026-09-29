@@ -1,7 +1,9 @@
 import {
   createTransactionService,
+  createTransferService,
   getUserTransactionsService,
   getTransactionByIdService,
+  updateTransactionMetadataService,
   reverseTransactionService,
 } from "./transaction.service.js";
 
@@ -24,6 +26,25 @@ export async function createTransaction(req, res) {
   }
 }
 
+export async function createTransfer(req, res) {
+  try {
+    const userId = req.user.id;
+    const { fromAccountId, toAccountId, amount, description, transactionDate } = req.body;
+
+    const result = await createTransferService({
+      userId, fromAccountId, toAccountId, amount, description, transactionDate
+    });
+
+    res.status(201).json(result);
+  } catch (error) {
+    if (error.type === "VALIDATION_ERROR") return res.status(400).json({ error: error.message });
+    if (error.type === "NOT_FOUND") return res.status(404).json({ error: error.message });
+    if (error.type === "INSUFFICIENT_BALANCE") return res.status(400).json({ error: error.message });
+    console.error("Error creando transferencia:", error);
+    res.status(500).json({ error: "Error creando la transferencia" });
+  }
+}
+
 export async function getTransactions(req, res) {
   try {
     const transactions = await getUserTransactionsService(req.user.id);
@@ -40,6 +61,21 @@ export async function getTransactionById(req, res) {
     if (!transaction) return res.status(404).json({ error: "Transacción no encontrada." });
     res.json(transaction);
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+export async function updateTransaction(req, res) {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { description, categoryId } = req.body;
+
+    const result = await updateTransactionMetadataService(id, userId, { description, categoryId });
+    res.json(result);
+  } catch (error) {
+    if (error.type === "VALIDATION_ERROR") return res.status(400).json({ error: error.message });
+    if (error.type === "NOT_FOUND") return res.status(404).json({ error: error.message });
     res.status(500).json({ error: error.message });
   }
 }

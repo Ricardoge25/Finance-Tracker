@@ -1,91 +1,77 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Plus, ArrowUpRight, ArrowDownLeft, RotateCcw } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft, RotateCcw, Pencil, Wallet, Tag, Calendar, ArrowLeftRight } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import Modal from "@/components/Modal";
 
-export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState([]);
-  const [accounts, setAccounts] = useState([]);
+export default function TransactionDetailPage() {
+  const { id } = useParams();
+  const router = useRouter();
+  const [transaction, setTransaction] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    accountId: "", categoryId: "", type: "GASTO", amount: "", description: "",
-    transactionDate: new Date().toISOString().slice(0, 10),
-  });
-  const [formError, setFormError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({ description: "", categoryId: "" });
+  const [editError, setEditError] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  async function loadAll() {
+  async function load() {
     try {
       setLoading(true);
-      const [txs, accs, cats] = await Promise.all([
-        apiFetch("/api/transactions"),
-        apiFetch("/api/accounts"),
+      const [tx, cats] = await Promise.all([
+        apiFetch(`/api/transactions/${id}`),
         apiFetch("/api/categories"),
       ]);
-      setTransactions(txs);
-      setAccounts(accs);
+      setTransaction(tx);
       setCategories(cats);
+      setEditData({ description: tx.description || "", categoryId: tx.category_id || "" });
       setError(null);
     } catch (err) {
-      console.error("Error cargando transacciones:", err);
-      setError("No se pudo conectar con el servidor.");
+      setError("No se pudo cargar la transacción.");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadAll();
-  }, []);
+    load();
+  }, [id]);
 
-  const filteredCategories = categories.filter((c) => c.type === formData.type);
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setFormError("");
-    setSubmitting(true);
-
-    try {
-      await apiFetch("/api/transactions", {
-        method: "POST",
-        body: JSON.stringify({
-          ...formData,
-          accountId: parseInt(formData.accountId),
-          categoryId: parseInt(formData.categoryId),
-          amount: parseFloat(formData.amount),
-        }),
-      });
-      setIsModalOpen(false);
-      setFormData({
-        accountId: "", categoryId: "", type: "GASTO", amount: "", description: "",
-        transactionDate: new Date().toISOString().slice(0, 10),
-      });
-      loadAll();
-    } catch (err) {
-      setFormError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleReverse(id) {
+  async function handleReverse() {
     const reason = prompt("Motivo de la reversión (obligatorio):");
     if (!reason || reason.trim() === "") return;
-
     try {
       await apiFetch(`/api/transactions/${id}/reverse`, {
         method: "POST",
         body: JSON.stringify({ reason }),
       });
-      loadAll();
+      router.push("/transactions");
     } catch (err) {
       alert(err.message);
+    }
+  }
+
+  async function handleSaveEdit(e) {
+    e.preventDefault();
+    setEditError("");
+    setSaving(true);
+    try {
+      const payload = { description: editData.description };
+      if (transaction.type !== "TRANSFERENCIA") {
+        payload.categoryId = parseInt(editData.categoryId);
+      }
+      const updated = await apiFetch(`/api/transactions/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      setTransaction(updated);
+      setIsEditing(false);
+    } catch (err) {
+      setEditError(err.message);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -97,197 +83,174 @@ export default function TransactionsPage() {
     );
   }
 
-  return (
-    <div className="bg-fondo min-h-screen p-8 space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/80 pb-5">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Transacciones</h1>
-          <p className="text-sm text-slate-400">Historial completo de tus movimientos</p>
-        </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-accent hover:bg-second-accent text-slate-950 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-accent/10 flex items-center gap-2 cursor-pointer"
-        >
-          <Plus className="w-4 h-4 stroke-3" />
-          Nueva Transacción
-        </button>
-      </div>
-
-      {error && (
+  if (error || !transaction) {
+    return (
+      <div className="bg-fondo min-h-screen p-4 sm:p-6 lg:p-8">
         <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
-          {error}
+          {error || "Transacción no encontrada."}
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {!error && transactions.length === 0 ? (
-        <div className="bg-primary rounded-2xl border border-slate-800/80 p-12 text-center">
-          <p className="text-slate-400 text-sm">No hay transacciones registradas todavía.</p>
-        </div>
-      ) : (
-        <div className="bg-primary border border-slate-800/80 rounded-2xl overflow-hidden">
-          {transactions.map((tx) => {
-            const isReversal = tx.reversed_transaction_id !== null;
-            const wasReversed = transactions.some((t) => t.reversed_transaction_id === tx.id);
-            const isIncome = tx.type === "INGRESO";
+  const isIncome = transaction.type === "INGRESO";
+  const isTransfer = transaction.type === "TRANSFERENCIA";
+  const isReversal = transaction.reversed_transaction_id !== null;
+  const matchingCategories = categories.filter((c) => c.type === transaction.type);
+  const initial = (transaction.description || transaction.category_name || "T").charAt(0).toUpperCase();
 
-            return (
-              <div
-                key={tx.id}
-                className="flex items-center justify-between px-6 py-4 border-b border-slate-800/60 last:border-0 hover:bg-slate-900/40 transition-colors"
-              >
-                <Link href={`/transactions/${tx.id}`} className="flex items-center gap-4 flex-1 min-w-0">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                      isIncome ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
-                    }`}
-                  >
-                    {isIncome ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">
-                      {tx.description || tx.category_name}
-                      {isReversal && (
-                        <span className="ml-2 text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
-                          REVERSIÓN
-                        </span>
-                      )}
-                      {wasReversed && (
-                        <span className="ml-2 text-[10px] font-semibold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
-                          REVERTIDA
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-slate-500 truncate">
-                      {tx.category_name} · {tx.account_name} ·{" "}
-                      {new Date(tx.transaction_date).toLocaleDateString("es-CO")}
-                    </p>
-                  </div>
-                </Link>
+  return (
+    <div className="bg-fondo min-h-screen p-4 sm:p-6 lg:p-8 space-y-6">
+      <button
+        onClick={() => router.push("/transactions")}
+        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm cursor-pointer"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Volver a transacciones
+      </button>
 
-                <div className="flex items-center gap-4 shrink-0">
-                  <span className={`text-sm font-bold ${isIncome ? "text-emerald-400" : "text-rose-400"}`}>
-                    {isIncome ? "+" : "-"}${Number(tx.amount).toLocaleString("es-CO", { minimumFractionDigits: 2 })}
-                  </span>
-
-                  {!isReversal && !wasReversed && (
-                    <button
-                      onClick={() => handleReverse(tx.id)}
-                      className="text-slate-500 hover:text-amber-400 transition-colors p-1.5 rounded-lg hover:bg-slate-800"
-                      title="Revertir transacción"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+        {/* Card principal */}
+        <div className="lg:col-span-2 bg-primary border border-slate-800/80 rounded-2xl p-6 sm:p-8 space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 ${
+                isTransfer ? "bg-blue-500/10 text-blue-400" : isIncome ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"
+              }`}>
+                {isTransfer ? <ArrowLeftRight className="w-5 h-5" /> : initial}
               </div>
-            );
-          })}
-        </div>
-      )}
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
+                  {isReversal ? "Reversión" : isTransfer ? "Transferencia" : isIncome ? "Ingreso" : "Gasto"}
+                </p>
+                <h2 className="text-lg font-bold text-white">
+                  {transaction.description || transaction.category_name || "Movimiento"}
+                </h2>
+              </div>
+            </div>
+            {!isEditing && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="text-slate-500 hover:text-accent p-2 rounded-lg hover:bg-slate-900/60 transition-colors shrink-0 cursor-pointer"
+                title="Editar"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Nueva Transacción">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {formError && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">
-              {formError}
+          {!isEditing && (
+            <div>
+              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Importe</p>
+              <p className={`text-3xl sm:text-4xl font-black ${isTransfer ? "text-blue-400" : isIncome ? "text-emerald-400" : "text-rose-400"}`}>
+                {isTransfer ? "" : isIncome ? "+" : "-"}${Number(transaction.amount).toLocaleString("es-CO", { minimumFractionDigits: 2 })}
+              </p>
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          {isEditing ? (
+            <form onSubmit={handleSaveEdit} className="space-y-4 pt-4 border-t border-slate-800/80">
+              {editError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">
+                  {editError}
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Descripción</label>
+                <input
+                  type="text"
+                  value={editData.description}
+                  onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
+                />
+              </div>
+              {!isTransfer && (
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Categoría</label>
+                  <select
+                    value={editData.categoryId}
+                    onChange={(e) => setEditData({ ...editData, categoryId: e.target.value })}
+                    className="w-full appearance-none bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
+                  >
+                    {matchingCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <p className="text-xs text-slate-500">
+                El monto, el tipo y las cuentas no se pueden editar directamente — usa "Revertir" si necesitas corregirlos.
+              </p>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setIsEditing(false)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl transition-all">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={saving} className="flex-1 bg-accent hover:bg-second-accent text-slate-950 font-bold py-2.5 rounded-xl transition-all disabled:opacity-50">
+                  {saving ? "Guardando..." : "Guardar"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="grid grid-cols-2 gap-5 pt-4 border-t border-slate-800/80">
+              <DetailItem icon={Calendar} label="Fecha" value={new Date(transaction.transaction_date).toLocaleDateString("es-CO")} />
+              {isTransfer ? (
+                <>
+                  <DetailItem icon={Wallet} label="Origen" value={transaction.account_name} />
+                  <DetailItem icon={Wallet} label="Destino" value={transaction.to_account_name} />
+                </>
+              ) : (
+                <>
+                  <DetailItem icon={Wallet} label="Cuenta" value={transaction.account_name} />
+                  <DetailItem icon={Tag} label="Categoría" value={transaction.category_name} />
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Columna lateral */}
+        <div className="space-y-5">
+          <div className="bg-primary border border-slate-800/80 rounded-2xl p-5">
+            <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-3">Estado</p>
+            {isReversal ? (
+              <div className="flex items-start gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                <div>
+                  <p className="text-sm text-white font-semibold">Es una reversión</p>
+                  <p className="text-xs text-slate-500 mt-1">{transaction.reversal_reason}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <p className="text-sm text-white">Movimiento activo</p>
+              </div>
+            )}
+          </div>
+
+          {!isReversal && (
             <button
-              type="button"
-              onClick={() => setFormData({ ...formData, type: "INGRESO", categoryId: "" })}
-              className={`py-2 rounded-xl text-sm font-semibold transition-all ${
-                formData.type === "INGRESO"
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                  : "bg-slate-950 text-slate-500 border border-slate-800"
-              } cursor-pointer`}
+              onClick={handleReverse}
+              className="w-full flex items-center justify-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-4 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer"
             >
-              Ingreso
+              <RotateCcw className="w-4 h-4" />
+              Revertir transacción
             </button>
-            <button
-              type="button"
-              onClick={() => setFormData({ ...formData, type: "GASTO", categoryId: "" })}
-              className={`py-2 rounded-xl text-sm font-semibold transition-all ${
-                formData.type === "GASTO"
-                  ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
-                  : "bg-slate-950 text-slate-500 border border-slate-800"
-              } cursor-pointer`}
-            >
-              Gasto
-            </button>
-          </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Cuenta</label>
-            <select
-              required
-              value={formData.accountId}
-              onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent cursor-pointer"
-            >
-              <option value="">Selecciona una cuenta</option>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Categoría</label>
-            <select
-              required
-              value={formData.categoryId}
-              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent cursor-pointer"
-            >
-              <option value="">Selecciona una categoría</option>
-              {filteredCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Monto</label>
-            <input
-              type="number"
-              step="0.01"
-              required
-              value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
-              placeholder="0.00"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Descripción (opcional)</label>
-            <input
-              type="text"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
-              placeholder="Ej. Almuerzo con el equipo"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Fecha</label>
-            <input
-              type="date"
-              required
-              value={formData.transactionDate}
-              onChange={(e) => setFormData({ ...formData, transactionDate: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full bg-accent hover:bg-second-accent text-slate-950 font-bold py-2.5 rounded-xl transition-all disabled:opacity-50 mt-2 cursor-pointer"
-          >
-            {submitting ? "Guardando..." : "Crear Transacción"}
-          </button>
-        </form>
-      </Modal>
+function DetailItem({ icon: Icon, label, value }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center shrink-0">
+        <Icon className="w-4 h-4 text-slate-500" />
+      </div>
+      <div>
+        <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{label}</p>
+        <p className="text-sm text-white mt-0.5">{value}</p>
+      </div>
     </div>
   );
 }
