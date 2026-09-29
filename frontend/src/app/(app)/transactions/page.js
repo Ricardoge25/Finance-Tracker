@@ -1,10 +1,20 @@
-'use client';
+'use client'
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, ArrowUpRight, ArrowDownLeft, RotateCcw } from "lucide-react";
+import { Plus, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, ArrowRight, RotateCcw } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import Modal from "@/components/Modal";
+
+const EMPTY_FORM = {
+  type: "GASTO",
+  accountId: "",
+  categoryId: "",
+  toAccountId: "",
+  amount: "",
+  description: "",
+  transactionDate: new Date().toISOString().slice(0, 10),
+};
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState([]);
@@ -13,10 +23,7 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    accountId: "", categoryId: "", type: "GASTO", amount: "", description: "",
-    transactionDate: new Date().toISOString().slice(0, 10),
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -45,6 +52,11 @@ export default function TransactionsPage() {
   }, []);
 
   const filteredCategories = categories.filter((c) => c.type === formData.type);
+  const destinationOptions = accounts.filter((a) => String(a.id) !== String(formData.accountId));
+
+  function selectType(type) {
+    setFormData({ ...EMPTY_FORM, type, transactionDate: formData.transactionDate });
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -52,20 +64,32 @@ export default function TransactionsPage() {
     setSubmitting(true);
 
     try {
-      await apiFetch("/api/transactions", {
-        method: "POST",
-        body: JSON.stringify({
-          ...formData,
-          accountId: parseInt(formData.accountId),
-          categoryId: parseInt(formData.categoryId),
-          amount: parseFloat(formData.amount),
-        }),
-      });
+      if (formData.type === "TRANSFERENCIA") {
+        await apiFetch("/api/transactions/transfer", {
+          method: "POST",
+          body: JSON.stringify({
+            fromAccountId: parseInt(formData.accountId),
+            toAccountId: parseInt(formData.toAccountId),
+            amount: parseFloat(formData.amount),
+            description: formData.description,
+            transactionDate: formData.transactionDate,
+          }),
+        });
+      } else {
+        await apiFetch("/api/transactions", {
+          method: "POST",
+          body: JSON.stringify({
+            accountId: parseInt(formData.accountId),
+            categoryId: parseInt(formData.categoryId),
+            amount: parseFloat(formData.amount),
+            type: formData.type,
+            description: formData.description,
+            transactionDate: formData.transactionDate,
+          }),
+        });
+      }
       setIsModalOpen(false);
-      setFormData({
-        accountId: "", categoryId: "", type: "GASTO", amount: "", description: "",
-        transactionDate: new Date().toISOString().slice(0, 10),
-      });
+      setFormData(EMPTY_FORM);
       loadAll();
     } catch (err) {
       setFormError(err.message);
@@ -79,7 +103,7 @@ export default function TransactionsPage() {
     if (!reason || reason.trim() === "") return;
 
     try {
-      await apiFetch(`/api/transactions/${id}/reverse`, {
+      await apiFetch(`/api/transaction/${id}/reverse`, {
         method: "POST",
         body: JSON.stringify({ reason }),
       });
@@ -101,12 +125,12 @@ export default function TransactionsPage() {
     <div className="bg-fondo min-h-screen p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-800/80 pb-5">
         <div>
-          <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-white">Transacciones</h1>
-          <p className="text-sm text-slate-400">Historial completo de tus movimientos</p>
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-white">Transacciones</h1>
+          <p className="text-base text-slate-400">Historial completo de tus movimientos</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-accent hover:bg-accent-hover text-slate-950 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-accent/10 flex items-center justify-center gap-2 w-full sm:w-auto"
+          className="bg-accent hover:bg-second-accent text-slate-950 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-accent/10 flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer"
         >
           <Plus className="w-4 h-4 stroke-3" />
           Nueva Transacción
@@ -121,7 +145,7 @@ export default function TransactionsPage() {
 
       {!error && transactions.length === 0 ? (
         <div className="bg-primary rounded-2xl border border-slate-800/80 p-12 text-center">
-          <p className="text-slate-400 text-sm">No hay transacciones registradas todavía.</p>
+          <p className="text-slate-400 text-sm">No hayu transacciones registradas tdavía</p>
         </div>
       ) : (
         <div className="bg-primary border border-slate-800/80 rounded-2xl overflow-hidden">
@@ -129,6 +153,7 @@ export default function TransactionsPage() {
             const isReversal = tx.reversed_transaction_id !== null;
             const wasReversed = transactions.some((t) => t.reversed_transaction_id === tx.id);
             const isIncome = tx.type === "INGRESO";
+            const isTransfer = tx.type === "TRANSFERENCIA";
 
             return (
               <div
@@ -138,35 +163,51 @@ export default function TransactionsPage() {
                 <Link href={`/transactions/${tx.id}`} className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                   <div
                     className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${
-                      isIncome ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
+                      isTransfer
+                        ? "bg-blue-500/10 text-blue-400"
+                        : isIncome
+                        ? "bg-emerald-500/10 text-emerald-400"
+                        : "bg-rose-500/10 text-rose-400"
                     }`}
                   >
-                    {isIncome ? <ArrowDownLeft className="w-4 h-4 sm:w-5 sm:h-5" /> : <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5" />}
+                    {isTransfer ? (
+                      <ArrowLeftRight className="w-4 h-4 sm:w-5 sm:h-5" /> 
+                    ) : isIncome ? (
+                      <ArrowDownLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                    ) : (
+                      <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                    )}
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-white truncate">
-                      {tx.description || tx.category_name}
+                      {isTransfer ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          {tx.account_name}
+                          <ArrowRight
+                            className="h-3.5 w-3.5 text-slate-400"
+                            aria-label="Transferencia"
+                          />
+                          {tx.to_account_name}
+                        </span>
+                      ) : (
+                        tx.description || tx.category_name
+                      )}
                       {isReversal && (
-                        <span className="ml-2 text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                        <span className="ml-2 text-[10px] font-semibold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
                           REVERSIÓN
                         </span>
                       )}
-                      {wasReversed && (
-                        <span className="ml-2 text-[10px] font-semibold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
-                          REVERTIDA
-                        </span>
-                      )}
                     </p>
-                    <p className="text-xs text-slate-500 truncate">
-                      {tx.category_name} · {tx.account_name} ·{" "}
+                    <p className="text-sm text-slate-500 truncate">
+                      {isTransfer ? "Transferencia" : tx.category_name} ·{" "}
                       {new Date(tx.transaction_date).toLocaleDateString("es-CO")}
                     </p>
                   </div>
                 </Link>
 
                 <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                  <span className={`text-sm font-bold ${isIncome ? "text-emerald-400" : "text-rose-400"}`}>
-                    {isIncome ? "+" : "-"}${Number(tx.amount).toLocaleString("es-CO", { minimumFractionDigits: 2 })}
+                  <span className={`text-sm font-bold ${isTransfer ? "text-blue-400" : isIncome ? "text-emerald-400" : "text-rose-400"}`}>
+                    {isTransfer ? "" : isIncome ? "+" : "-"}${Number(tx.amount).toLocaleString("es-CO", {minimumFractionDigits: 2 })}
                   </span>
 
                   {!isReversal && !wasReversed && (
@@ -193,96 +234,124 @@ export default function TransactionsPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => setFormData({ ...formData, type: "INGRESO", categoryId: "" })}
-              className={`py-2 rounded-xl text-sm font-semibold transition-all ${
+              onClick={() => selectType("INGRESO")}
+              className={`py-2 rounded-xl text-sm sm:text-base font-semibold transition-all ${
                 formData.type === "INGRESO"
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                  ? "bg-emerald-500/20 text-emerald-400 border-2 border-emerald-500/40"
                   : "bg-slate-950 text-slate-500 border border-slate-800"
-              }`}
+              } cursor-pointer`}
             >
               Ingreso
             </button>
             <button
               type="button"
-              onClick={() => setFormData({ ...formData, type: "GASTO", categoryId: "" })}
-              className={`py-2 rounded-xl text-sm font-semibold transition-all ${
+              onClick={() => selectType("GASTO")}
+              className={`py-2 rounded-xl text-sm sm:text-base font-semibold transition-all ${
                 formData.type === "GASTO"
-                  ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                  ? "bg-rose-500/20 text-rose-400 border-2 border-rose-500/40"
                   : "bg-slate-950 text-slate-500 border border-slate-800"
-              }`}
+              } cursor-pointer`}
             >
               Gasto
+            </button>
+            <button
+              type="button"
+              onClick={() => selectType("TRANSFERENCIA")}
+              className={`py-2 rounded-xl text-sm sm:text-base font-semibold transition-all ${
+                formData.type === "TRANSFERENCIA"
+                  ? "bg-blue-500/20 text-blue-400 border-2 border-blue-500/40"
+                  : "bg-slate-950 text-slate-500 border border-slate-800"
+              } cursor-pointer`}
+            >
+              Transferencia
             </button>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Cuenta</label>
+            <label className="block text-sm font-semibold uppercase text-slate-400 mb-1 ml-1">
+              {formData.type === "TRANSFERENCIA" ? "Cuenta origen" : "Cuenta"}
+            </label>
             <select
               required
               value={formData.accountId}
-              onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
+              onChange={(e) => setFormData({ ...formData, accountId: e.target.value, toAccountId: "" })}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent focus:border-2"
             >
               <option value="">Selecciona una cuenta</option>
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Categoría</label>
-            <select
-              required
-              value={formData.categoryId}
-              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
-            >
-              <option value="">Selecciona una categoría</option>
-              {filteredCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
+          {formData.type === "TRANSFERENCIA" ? (
+            <div>
+              <label className="block text-sm font-semibold uppercase text-slate-400 mb-1 ml-1">Cuenta destino</label>
+              <select
+                required
+                value={formData.toAccountId}
+                onChange={(e) => setFormData({ ...formData, toAccountId: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent focus:border-2"
+              >
+                <option value="">Selecciona una cuenta</option>
+                {destinationOptions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-semibold uppercase text-slate-400 mb-1 ml-1">Categoría</label>
+              <select
+                required
+                value={formData.categoryId}
+                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent focus:border-2"
+              >
+                <option value="">Selecciona una categoría</option>
+                {filteredCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
 
           <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Monto</label>
-            <input
+            <label className="block text-sm font-semibold uppercase text-slate-400 mb-1 ml-1">Monto</label>
+            <input 
               type="number"
               step="0.01"
               required
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent focus:border-2"
               placeholder="0.00"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Descripción (opcional)</label>
-            <input
+            <label className="block text-sm font-semibold uppercase text-slate-400 mb-1 ml-1">Descripción</label>
+            <input 
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
-              placeholder="Ej. Almuerzo con el equipo"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent focus:border-2"
+              placeholder="Ej. Café diario"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Fecha</label>
-            <input
+            <label className="block text-sm font-semibold uppercase text-slate-400 mb-1 ml-1">Fecha</label>
+            <input 
               type="date"
               required
               value={formData.transactionDate}
               onChange={(e) => setFormData({ ...formData, transactionDate: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent focus:border-2 cursor-pointer"
             />
           </div>
 
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-accent hover:bg-accent-hover text-slate-950 font-bold py-2.5 rounded-xl transition-all disabled:opacity-50 mt-2"
+            className="w-full bg-accent hover:bg-second-accent text-slate-950 font-bold py-2 rounded-xl transition-all disabled:opacity-50 cursor-pointer"
           >
             {submitting ? "Guardando..." : "Crear Transacción"}
           </button>
@@ -291,3 +360,4 @@ export default function TransactionsPage() {
     </div>
   );
 }
+
