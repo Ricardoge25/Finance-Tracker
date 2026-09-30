@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, RotateCcw, Pencil, Wallet, Tag, Calendar, ArrowLeftRight } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import  Link  from "next/link";
 
 export default function TransactionDetailPage() {
   const { id } = useParams();
@@ -101,13 +102,13 @@ export default function TransactionDetailPage() {
 
   return (
     <div className="bg-fondo min-h-screen p-4 sm:p-6 lg:p-8 space-y-6">
-      <button
-        onClick={() => router.push("/transactions")}
+      <Link
+        href="/transactions"
         className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" />
         Volver a transacciones
-      </button>
+      </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
         {/* Card principal */}
@@ -190,7 +191,7 @@ export default function TransactionDetailPage() {
             </form>
           ) : (
             <div className="grid grid-cols-2 gap-5 pt-4 border-t border-slate-800/80">
-              <DetailItem icon={Calendar} label="Fecha" value={new Date(transaction.transaction_date).toLocaleDateString("es-CO")} />
+              <DetailItem icon={Calendar} label="Fecha" value={new Date(transaction.transaction_date).toLocaleString("es-CO")} />
               {isTransfer ? (
                 <>
                   <DetailItem icon={Wallet} label="Origen" value={transaction.account_name} />
@@ -218,6 +219,7 @@ export default function TransactionDetailPage() {
                   <p className="text-xs text-slate-500 mt-1">{transaction.reversal_reason}</p>
                 </div>
               </div>
+              
             ) : (
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
@@ -226,7 +228,7 @@ export default function TransactionDetailPage() {
             )}
           </div>
 
-          {!isReversal && (
+          {!isReversal ? (
             <button
               onClick={handleReverse}
               className="w-full flex items-center justify-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-4 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer"
@@ -234,6 +236,13 @@ export default function TransactionDetailPage() {
               <RotateCcw className="w-4 h-4" />
               Revertir transacción
             </button>
+          ) : (
+            <Link 
+              href={`/transactions/${transaction.reversed_transaction_id}`}
+              className="w-full flex items-start justify-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-700 px-4 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer">
+                <ArrowLeft className="w-4 h-4 mt-0.5" />
+                Ver transacción original
+            </Link>
           )}
         </div>
       </div>

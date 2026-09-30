@@ -377,7 +377,7 @@ export async function reverseTransactionService(transactionId, userId, reason) {
       reversalResult = await client.query(
         `INSERT INTO transactions
           (account_id, to_account_id, category_id, type, amount, description, transaction_date, reversed_transaction_id, reversal_reason)
-        VALUES ($1, $2, NULL, 'TRANSFERENCIA', $3, $4, CURRENT_DATE, $5, $6)
+        VALUES ($1, $2, NULL, 'TRANSFERENCIA', $3, $4, CURRENT_TIMESTAMP, $5, $6)
         RETURNING *`,
         [reverseFromId, reverseToId, amount, original.description, transactionId, reason]
       );
@@ -404,13 +404,13 @@ export async function reverseTransactionService(transactionId, userId, reason) {
       reversalResult = await client.query(
         `INSERT INTO transactions
           (account_id, category_id, type, amount, description, transaction_date, reversed_transaction_id, reversal_reason)
-        VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6, $7)
         RETURNING *`,
         [original.account_id, original.category_id, reversedType, amount, original.description, transactionId, reason]
       );
 
       await client.query(
-        "UPDATE accounts SET balance = $1, update_at = CURRENT_TIMESTAMP WHERE id = $2",
+        "UPDATE accounts SET balance = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
         [newBalance, original.account_id]
       );
     }
