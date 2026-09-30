@@ -13,7 +13,7 @@ const EMPTY_FORM = {
   toAccountId: "",
   amount: "",
   description: "",
-  transactionDate: new Date().toISOString().slice(0, 10),
+  transactionDate: new Date().toISOString().slice(0, 16),
 };
 
 export default function TransactionsPage() {
@@ -200,7 +200,7 @@ export default function TransactionsPage() {
                     </p>
                     <p className="text-sm text-slate-500 truncate">
                       {isTransfer ? "Transferencia" : tx.category_name} ·{" "}
-                      {new Date(tx.transaction_date).toLocaleDateString("es-CO")}
+                      {new Date(tx.transaction_date).toLocaleString("es-CO")}
                     </p>
                   </div>
                 </Link>
@@ -340,7 +340,7 @@ export default function TransactionsPage() {
           <div>
             <label className="block text-sm font-semibold uppercase text-slate-400 mb-1 ml-1">Fecha</label>
             <input 
-              type="date"
+              type="datetime-local"
               required
               value={formData.transactionDate}
               onChange={(e) => setFormData({ ...formData, transactionDate: e.target.value })}
