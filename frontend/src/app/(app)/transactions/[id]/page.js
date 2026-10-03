@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, RotateCcw, Pencil, Wallet, Tag, Calendar, ArrowLeftRight } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import  Link  from "next/link";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function TransactionDetailPage() {
   const { id } = useParams();
@@ -175,6 +176,19 @@ export default function TransactionDetailPage() {
                   >
                     {matchingCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
+                  <Select
+                    value={editData.categoryId}
+                    onChangeValue={(value) => setEditData({ ...editData, categoryId: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={editData.categoryId} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {matchingCategories.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
               <p className="text-xs text-slate-500">

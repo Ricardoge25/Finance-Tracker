@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, ArrowRight, RotateCcw } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiFetch } from "@/lib/api";
 import Modal from "@/components/Modal";
+import CurrencyInput from "@/components/CurrencyInput";
+import DateTimePicker from "@/components/DateTimePicker";
 
 const EMPTY_FORM = {
   type: "GASTO",
@@ -274,21 +277,25 @@ export default function TransactionsPage() {
             <label className="block text-sm font-semibold uppercase text-slate-400 mb-1 ml-1">
               {formData.type === "TRANSFERENCIA" ? "Cuenta origen" : "Cuenta"}
             </label>
-            <select
-              required
+            <Select
               value={formData.accountId}
-              onChange={(e) => setFormData({ ...formData, accountId: e.target.value, toAccountId: "" })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent focus:border-2"
+              onValueChange={(value) => setFormData({ ...formData, accountId: value })}
             >
-              <option value="">Selecciona una cuenta</option>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona una cuenta" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((a) => (
+                  <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {formData.type === "TRANSFERENCIA" ? (
             <div>
               <label className="block text-sm font-semibold uppercase text-slate-400 mb-1 ml-1">Cuenta destino</label>
-              <select
+              {/* <select
                 required
                 value={formData.toAccountId}
                 onChange={(e) => setFormData({ ...formData, toAccountId: e.target.value })}
@@ -296,12 +303,25 @@ export default function TransactionsPage() {
               >
                 <option value="">Selecciona una cuenta</option>
                 {destinationOptions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
+              </select> */}
+              <Select
+                value={formData.toAccountId}
+                onValueChange={(value) => setFormData({ ...formData, toAccountId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una cuenta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {destinationOptions.map((a) => (
+                    <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           ) : (
             <div>
               <label className="block text-sm font-semibold uppercase text-slate-400 mb-1 ml-1">Categoría</label>
-              <select
+              {/* <select
                 required
                 value={formData.categoryId}
                 onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
@@ -309,20 +329,28 @@ export default function TransactionsPage() {
               >
                 <option value="">Selecciona una categoría</option>
                 {filteredCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              </select> */}
+              <Select
+                value={formData.categoryId}
+                onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredCategories.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
           <div>
             <label className="block text-sm font-semibold uppercase text-slate-400 mb-1 ml-1">Monto</label>
-            <input 
-              type="number"
-              step="0.01"
-              required
+            <CurrencyInput 
               value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent focus:border-2"
-              placeholder="0.00"
+              onChange={(val) => setFormData({ ...formData, amount: val })}
             />
           </div>
 
@@ -339,12 +367,9 @@ export default function TransactionsPage() {
 
           <div>
             <label className="block text-sm font-semibold uppercase text-slate-400 mb-1 ml-1">Fecha</label>
-            <input 
-              type="datetime-local"
-              required
+            <DateTimePicker 
               value={formData.transactionDate}
-              onChange={(e) => setFormData({ ...formData, transactionDate: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent focus:border-2 cursor-pointer"
+              onChange={(val) => setFormData({ ...formData, transactionDate: val })}
             />
           </div>
 
