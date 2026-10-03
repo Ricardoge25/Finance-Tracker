@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import Modal from "@/components/Modal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const CATEGORY_TYPES = ["INGRESO", "GASTO"];
 const PRESET_COLORS = ["#2DD4BF", "#ef4444", "#3b82f6", "#f97316", "#a855f7", "#eab308", "#ec4899"];
@@ -131,7 +132,7 @@ export default function CategoriesPage() {
         </div>
         <button
           onClick={openCreateModal}
-          className="bg-accent hover:bg-accent-hover text-slate-950 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-accent/10 flex items-center justify-center gap-2 w-full sm:w-auto"
+          className="bg-accent hover:bg-accent-hover text-slate-950 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-accent/10 flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer"
         >
           <Plus className="w-4 h-4 stroke-3" />
           Nueva Categoría
@@ -173,13 +174,26 @@ export default function CategoriesPage() {
 
           <div>
             <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Tipo</label>
-            <select
+            {/* <select
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
             >
               {CATEGORY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
+            </select> */}
+            <Select
+              value={formData.type}
+              onValueChange={(value) => setFormData({ ...formData, type: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORY_TYPES.map((t) => (
+                  <SelectItem key={t} value={String(t)}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
@@ -190,7 +204,7 @@ export default function CategoriesPage() {
                   type="button"
                   key={color}
                   onClick={() => setFormData({ ...formData, color })}
-                  className={`w-8 h-8 rounded-full transition-all ${
+                  className={`w-8 h-8 rounded-full transition-all cursor-pointer ${
                     formData.color === color ? "ring-2 ring-offset-2 ring-offset-primary ring-white" : ""
                   }`}
                   style={{ backgroundColor: color }}

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import Modal from "@/components/Modal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import CurrencyInput from "@/components/CurrencyInput";
 
 const ACCOUNT_TYPES = ["AHORROS", "CORRIENTE", "EFECTIVO", "INVERSIÓN"];
 const CURRENCIES = ["COP", "USD", "EUR"];
@@ -140,7 +142,7 @@ export default function AccountsPage() {
         </div>
         <button
           onClick={openCreateModal}
-          className="bg-accent hover:bg-accent-hover text-slate-950 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-accent/10 flex items-center justify-center gap-2 w-full sm:w-auto"
+          className="bg-accent hover:bg-accent-hover text-slate-950 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-accent/10 flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer"
         >
           <Plus className="w-4 h-4 stroke-3" />
           Nueva Cuenta
@@ -228,37 +230,58 @@ export default function AccountsPage() {
 
           <div>
             <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Tipo</label>
-            <select
+            {/* <select
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
             >
               {ACCOUNT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
+            </select> */}
+            <Select
+              value={formData.type}
+              onValueChange={(value) => setFormData({ ...formData, type: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ACCOUNT_TYPES.map((t) => (
+                  <SelectItem key={t} value={String(t)}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
             <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Balance Inicial</label>
-            <input
-              type="number"
-              step="0.01"
-              required
-              value={formData.balance}
-              onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
-              placeholder="0.00"
+            <CurrencyInput
+              value={formData.amount}
+              onChange={(val) => setFormData({ ...formData, amount: val })}
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Moneda</label>
-            <select
+            {/* <select
               value={formData.currency}
               onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-accent"
             >
               {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            </select> */}
+            <Select
+              value={formData.currency}
+              onValueChange={(value) => setFormData({ ...formData, currency: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c} value={String(c)}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <button
