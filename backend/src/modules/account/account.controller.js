@@ -5,6 +5,8 @@ import {
     updateAccount as updateAccountService,
     deleteAccount as deleteAccountService,
 } from "./account.service.js";
+import { getAccountTransactionsService } from "../transaction/transaction.service.js";
+
 
 /* PETICIÓN PARA OBTENER CUENTAS */
 export async function getAccounts(req, res) {
@@ -69,5 +71,16 @@ export async function deleteAccount(req, res) {
   } catch (error) {
     console.error("Error eliminando cuenta:", error);
     return res.status(500).json({ error: "Error eliminando la cuenta." });
+  }
+}
+
+export async function getAccountTransactions(req, res) {
+  try {
+    const { id } = req.params;
+    const transactions = await getAccountTransactionsService(id, req.user.id);
+    res.json(transactions);
+  } catch (error) {
+    if (error.type === "NOT_FOUND") return res.status(404).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 }
