@@ -424,3 +424,38 @@ export async function reverseTransactionService(transactionId, userId, reason) {
     client.release();
   }
 }
+
+/**
+ * Vista detalle de una cuenta
+ */
+export async function getAccountTransactionsService(accountId, userId) {
+  const accountCheck = await pool.query(
+    "SELECT id FROM accounts WHERE id = $1 AND user_id = $2",
+    [accountId, userId]
+  );
+
+  if (accountCheck.rows.length === 0) {
+    const error = new Error("Cuenta no encontrada.");
+    error.type = "NOT_FOUND";
+    throw error;
+  }
+
+  const result = await pool.query(
+    `SELECT
+      t.id, t.account_id, a.name AS account_name,
+      t.to_account_id, to_acc.name AS to_account_name,
+      t.category_id, c.name AS category_name,
+      t.type, t.amount, t.description, t.transaction_date,
+      t.reversed_transaction_id, t.reversal_reason,
+      t.created_at
+    FROM transactions t
+    JOIN accounts a ON t.account_id = a.id
+    LEFT JOIN accounts to_acc ON t.to_account_id = to_acc.id
+    LEFT JOIN categories c ON t.category_id = c.id
+    WHERE t.account_id = $1 OR t.to_account_id = $1
+    ORDER BY t.transaction_date DESC, t.created_at DESC`,
+    [accountId]
+  );
+
+  return result.rows;
+}

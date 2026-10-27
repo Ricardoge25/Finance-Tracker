@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import Modal from "@/components/Modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import CurrencyInput from "@/components/CurrencyInput";
+import Link from "next/link";
 
 const ACCOUNT_TYPES = ["AHORROS", "CORRIENTE", "EFECTIVO", "INVERSIÓN"];
 const CURRENCIES = ["COP", "USD", "EUR"];
@@ -162,48 +163,59 @@ export default function AccountsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {accounts.map((acc) => (
-            <div
+            <Link
               key={acc.id}
-              className="bg-primary border border-slate-800/80 hover:border-slate-700 p-6 rounded-2xl transition-all shadow-xl relative overflow-hidden group"
+              href={`/accounts/${acc.id}`}
             >
-              <div className="absolute top-0 right-0 w-30 h-30 bg-accent/5 rounded-bl-full pointer-events-none group-hover:bg-accent/10 transition-all" />
-
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-accent bg-accent/10 px-2.5 py-1 rounded-md border border-accent/20">
-                    {acc.currency}
-                  </span>
-                  <h3 className="text-lg font-bold text-white mt-2">{acc.name}</h3>
+              <div
+                className="bg-primary border border-slate-800/80 hover:border-slate-700 p-6 rounded-2xl transition-all shadow-xl relative overflow-hidden group"
+              >
+                <div className="absolute top-0 right-0 w-30 h-30 bg-accent/5 rounded-bl-full pointer-events-none group-hover:bg-accent/10 transition-all" />
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-accent bg-accent/10 px-2.5 py-1 rounded-md border border-accent/20">
+                      {acc.currency}
+                    </span>
+                    <h3 className="text-lg font-bold text-white mt-2">{acc.name}</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openEditingModal(acc);
+                      }}
+                      className="text-slate-600 hover:text-accent transition-colors p-1"
+                      title="Editar cuenta"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDelete(acc.id);
+                      }}
+                      className="text-slate-600 hover:text-rose-400 transition-colors p-1"
+                      title="Eliminar cuenta"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => openEditingModal(acc)}
-                    className="text-slate-600 hover:text-accent transition-colors p-1"
-                    title="Editar cuenta"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(acc.id)}
-                    className="text-slate-600 hover:text-rose-400 transition-colors p-1"
-                    title="Eliminar cuenta"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+
+                <span className="text-xs font-medium text-slate-400 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+                  {acc.type}
+                </span>
+
+                <div className="mt-6 pt-4 border-t border-slate-800/80">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Balance Disponible</p>
+                  <p className={`text-2xl font-black mt-1 ${acc.balance < 0 ? "text-rose-400" : "text-white"}`}>
+                    ${acc.balance.toLocaleString("es-CO", { minimumFractionDigits: 2 })}
+                  </p>
                 </div>
               </div>
-
-              <span className="text-xs font-medium text-slate-400 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
-                {acc.type}
-              </span>
-
-              <div className="mt-6 pt-4 border-t border-slate-800/80">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Balance Disponible</p>
-                <p className={`text-2xl font-black mt-1 ${acc.balance < 0 ? "text-rose-400" : "text-white"}`}>
-                  ${acc.balance.toLocaleString("es-CO", { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
@@ -255,8 +267,8 @@ export default function AccountsPage() {
           <div>
             <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Balance Inicial</label>
             <CurrencyInput
-              value={formData.amount}
-              onChange={(val) => setFormData({ ...formData, amount: val })}
+              value={formData.balance}
+              onChange={(val) => setFormData({ ...formData, balance: val })}
             />
           </div>
 
